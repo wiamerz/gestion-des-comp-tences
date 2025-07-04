@@ -2,15 +2,14 @@ import React from 'react'
 import Navbar from './navbar'
 import Footer from './Footer'
 
-function Skill() {
+function SkillCard() {
   return (
-
     <div>
-        <Navbar/>
-        
-        <Footer/>
+      <Navbar/>
+      
+      <Footer/>
     </div>
   )
 }
 
-export default Skill
+export default SkillCard

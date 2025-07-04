@@ -1,9 +1,10 @@
 import React from 'react'
-import Skill from './compenents/Skill'
+import SkillCard from './compenents/SkillCard'
+import Dashboard from './compenents/Dashbord'
 
 function App() {
   return (
-     <Skill/>
+     <Dashboard/>
   )
 }
 

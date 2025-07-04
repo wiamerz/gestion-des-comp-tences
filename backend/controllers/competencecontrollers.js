@@ -4,12 +4,11 @@ const Skill = require('../models/competence');
 // creat a skill
 const creatSkill = async(req, res) => {
      try {
-
        const {code, title, subSkillsSchema } = req.body;
 
        if(!code || !title || !subSkillsSchema){
         console.log('Missing required fields');
-        return res.status(400).json({error: 'Les champs startPoint, capacity et date sont requis' 
+        return res.status(400).json({error: 'Tous les champs sont requis' 
         });
        }
 
@@ -29,7 +28,30 @@ const creatSkill = async(req, res) => {
         res.status(500).json({ error: err.message });
      }
 }
+// creat sub skill  par skill id 
+const addsubskill = async(req,res) => {
+  try {
+    const {title, isValid } = req.body;
 
+       if(!title){
+        console.log('Missing required fields');
+        return res.status(400).json({error: 'title is required' 
+        });
+       }
+
+       const subskill = await Skill.create({
+        title
+       })
+
+       console.log('skill created successfully:', subskill._id);
+       res.status(201).json({
+        message: 'skill crat successfully',
+        skill: skill
+        })
+  } catch (error) {
+    res.status(400).json({error: err.message})
+  }
+}
 //get all skills 
 
 const getAllSkills = async(req, res) => {
