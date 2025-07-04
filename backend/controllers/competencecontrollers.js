@@ -20,7 +20,7 @@ const creatSkill = async(req, res) => {
 
        console.log('skill created successfully:', skill._id);
        res.status(201).json({
-        message: 'skill crat successfully',
+        message: 'skill creat successfully',
         skill: skill
        })
      } catch (err) {
@@ -28,30 +28,43 @@ const creatSkill = async(req, res) => {
         res.status(500).json({ error: err.message });
      }
 }
+
 // creat sub skill  par skill id 
-const addsubskill = async(req,res) => {
+const addsubskill = async (req, res) => {
   try {
-    const {title, isValid } = req.body;
+    const { title, isValid } = req.body;
+    const { skillId } = req.params;
 
-       if(!title){
-        console.log('Missing required fields');
-        return res.status(400).json({error: 'title is required' 
-        });
-       }
+    if (!title) {
+      console.log('Missing required fields');
+      return res.status(400).json({ error: 'Title is required' });
+    }
 
-       const subskill = await Skill.create({
-        title
-       })
+    const skill = await Skill.findById(skillId);
+    if (!skill) {
+      return res.status(404).json({ error: 'Skill not found' });
+    }
+    
 
-       console.log('skill created successfully:', subskill._id);
-       res.status(201).json({
-        message: 'skill crat successfully',
-        skill: skill
-        })
+    skill.subSkillsSchema.push({
+      title,
+      isValid: isValid ?? true, 
+    });
+
+    await skill.save();
+
+    console.log('Subskill added successfully to skill:', skill._id);
+    res.status(201).json({
+      message: 'Subskill added successfully',
+      skill: skill,
+    });
+
   } catch (error) {
-    res.status(400).json({error: err.message})
+    console.error('Error adding sub-skill:', error);
+    res.status(500).json({ error: error.message });
   }
-}
+};
+
 //get all skills 
 
 const getAllSkills = async(req, res) => {
@@ -100,4 +113,4 @@ const deleteSkill = async(req, res) => {
     
   }
 }
-module.exports = {creatSkill, getAllSkills, updateSkill, deleteSkill}
+module.exports = {creatSkill, getAllSkills, updateSkill, deleteSkill, addsubskill}

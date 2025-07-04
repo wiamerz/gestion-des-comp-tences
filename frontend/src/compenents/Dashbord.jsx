@@ -6,6 +6,9 @@ import { BadgeCheck, XCircle, Plus } from 'lucide-react';
 
 const Dashboard = () => {
   const [skills, setSkills] = useState([]);
+  const [formDatat, setFormData] = useState({
+     
+  })
 
   useEffect(() => {
     const fetchSkills = async () => {
@@ -22,7 +25,7 @@ const Dashboard = () => {
   const addskill = async() => {
     try {
        const data = await axios.post('http://localhost:5000/api/skill/add');
-
+     
         
     } catch (error) {
         
