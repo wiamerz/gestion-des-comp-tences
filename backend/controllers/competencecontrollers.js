@@ -31,4 +31,35 @@ const creatSkill = async(req, res) => {
 
 //get all skills 
 
-module.exports = {creatSkill}
+const getAllSkills = async(req, res) => {
+
+  try {
+    const skills = await Skill.find();
+    res.json(skills);    
+  } catch (error) {
+     res.status(500).json({ message: 'error in getting  skills', error: error.message });
+  } 
+
+}
+
+const updateSkill = async(req, res) => {
+  try {
+    const skill = await Skill.findById(req.params.id);
+    if(!skill){
+      return res.status(404).json({message: 'skill not found'});
+    }
+
+    const {code, title} = req.body;
+
+    if(code) skill.code = code;
+    if(title) skill.title = title;
+    
+    await skill.save();
+
+    res.json(skill);
+    
+  } catch (error) {
+    res.status(500).json({message: 'error update skill'}) 
+  }
+}
+module.exports = {creatSkill, getAllSkills, updateSkill}
