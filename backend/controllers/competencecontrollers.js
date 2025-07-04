@@ -53,7 +53,7 @@ const updateSkill = async(req, res) => {
 
     if(code) skill.code = code;
     if(title) skill.title = title;
-    
+
     await skill.save();
 
     res.json(skill);
@@ -62,4 +62,19 @@ const updateSkill = async(req, res) => {
     res.status(500).json({message: 'error update skill'}) 
   }
 }
-module.exports = {creatSkill, getAllSkills, updateSkill}
+
+const deleteSkill = async(req, res) => {
+  try {
+    const skill = await Skill.findByIdAndDelete(req.params.id);
+
+    if(!skill){
+      return res.status(404).json({message: 'skill not found'});
+    }
+   
+     res.status(200).json({ message: 'Skill deleted successfully' });
+  } catch (error) {
+    res.status(500).json({message: 'error in delete this skill'})
+    
+  }
+}
+module.exports = {creatSkill, getAllSkills, updateSkill, deleteSkill}
