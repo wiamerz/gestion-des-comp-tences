@@ -6,9 +6,10 @@ const subSkillSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
-  isValid: {
-    type: Boolean,
-    default: false
+  status: {
+    type: String,
+    enum: ['pending', 'valid', 'invalid'],
+    default: 'pending'
   }
 }); 
 

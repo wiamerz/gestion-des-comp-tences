@@ -17,11 +17,11 @@ const creatSkill = async(req, res) => {
         if (subSkillsSchema && Array.isArray(subSkillsSchema)) {
           processedSubSkills = subSkillsSchema.map(subSkill => {
             if (typeof subSkill === 'string') {
-              return { title: subSkill, isValid: false };
+              return { title: subSkill, status: 'pending' };
             } else if (typeof subSkill === 'object' && subSkill.title) {
               return { 
                 title: subSkill.title, 
-                isValid: subSkill.isValid !== undefined ? subSkill.isValid : false 
+                status: subSkill.status || 'pending'
               };
             }
             return null;
@@ -56,7 +56,7 @@ const getAllSkills = async(req, res) => {
 
 }
 
-//update main skill
+//update  skill
 const updateSkill = async(req, res) => {
   try {
     const skill = await Skill.findById(req.params.id);
@@ -108,7 +108,7 @@ const deleteSkill = async(req, res) => {
 // creat sub skill  par skill id 
 const addsubskill = async (req, res) => {
   try {
-    const { title, isValid } = req.body;
+    const { title, status } = req.body;
     const { skillId } = req.params;
 
     if (!title) {
@@ -121,14 +121,13 @@ const addsubskill = async (req, res) => {
       return res.status(404).json({ error: 'Skill not found' });
     }
     
-    // Fix subSkillsSchema if it's not an array
     if (!Array.isArray(skill.subSkillsSchema)) {
       skill.subSkillsSchema = [];
     }
 
     skill.subSkillsSchema.push({
       title,
-      isValid: isValid !== undefined ? isValid : false,   
+      status: status || 'pending',   
     });
 
     await skill.save();
@@ -149,7 +148,7 @@ const addsubskill = async (req, res) => {
 const updateSubSkill = async (req, res) => {
   try {
     const { skillId, subSkillId } = req.params;
-    const { title, isValid } = req.body;
+    const { title, status } = req.body;
     
     const skill = await Skill.findById(skillId);
     if (!skill) {
@@ -163,7 +162,7 @@ const updateSubSkill = async (req, res) => {
     }
     
     if (title !== undefined) subSkill.title = title;
-    if (isValid !== undefined) subSkill.isValid = isValid;
+    if (status !== undefined) subSkill.status = status;
     
     await skill.save();
     
@@ -209,6 +208,7 @@ const deleteSubSkill = async (req, res) => {
 const SubSkillValidation = async (req, res) => {
   try {
     const { skillId, subSkillId} = req.params;
+    const { status } = req.body;
     
     const skill = await Skill.findById(skillId);
     if (!skill) {
@@ -219,17 +219,28 @@ const SubSkillValidation = async (req, res) => {
       return res.status(400).json({ message: 'Invalid subskill index' });
     }
     
-    skill.subSkillsSchema[subSkillId].isValid = !skill.subSkillsSchema[subSkillId].isValid;
+    if (status && ['pending', 'valid', 'invalid'].includes(status)) {
+      skill.subSkillsSchema[subSkillId].status = status;
+    } else {
+      const currentStatus = skill.subSkillsSchema[subSkillId].status;
+      if (currentStatus === 'pending') {
+        skill.subSkillsSchema[subSkillId].status = 'valid';
+      } else if (currentStatus === 'valid') {
+        skill.subSkillsSchema[subSkillId].status = 'invalid';
+      } else {
+        skill.subSkillsSchema[subSkillId].status = 'pending';
+      }
+    }
     
     await skill.save();
     
     res.json({
-      message: 'Subskill validation status updated',
+      message: 'Subskill status updated successfully',
       skill: skill
     });
   } catch (error) {
-    console.error('Error toggling subskill validation:', error);
-    res.status(500).json({ message: 'Error updating validation status', error: error.message });
+    console.error('Error updating subskill status:', error);
+    res.status(500).json({ message: 'Error updating status', error: error.message });
   }
 };
 

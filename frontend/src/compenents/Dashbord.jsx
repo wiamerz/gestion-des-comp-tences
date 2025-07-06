@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import Navbar from './navbar';
 import Footer from './Footer';
-import { BadgeCheck, XCircle, Plus, Trash, Pencil } from 'lucide-react';
+import { BadgeCheck, XCircle, Clock, Plus, Trash, Pencil } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Dashboard = () => {
@@ -38,7 +38,7 @@ const Dashboard = () => {
     try {
       const transformedData = {
         ...skillData,
-        subSkillsSchema: skillData.subSkillsSchema.map(title => ({ title, isValid: false }))
+        subSkillsSchema: skillData.subSkillsSchema.map(title => ({ title, status: 'pending' }))
       };
       
       const response = await axios.post('http://localhost:5000/api/skill/add', transformedData);
@@ -56,7 +56,7 @@ const Dashboard = () => {
     try {
       const transformedData = {
         ...skillData,
-        subSkillsSchema: skillData.subSkillsSchema.map(title => ({ title, isValid: false }))
+        subSkillsSchema: skillData.subSkillsSchema.map(title => ({ title, status: 'pending' }))
       };
       
       const response = await axios.put(`http://localhost:5000/api/skill/edit/${skillId}`, transformedData);
@@ -139,6 +139,34 @@ const Dashboard = () => {
     }
   };
 
+  // Helper function to get status display info
+  const getStatusDisplay = (status) => {
+    switch (status) {
+      case 'valid':
+        return {
+          icon: <BadgeCheck className="w-3 h-3 text-green-500" />,
+          text: 'Valid',
+          textColor: 'text-green-600',
+          bgColor: 'bg-green-50'
+        };
+      case 'invalid':
+        return {
+          icon: <XCircle className="w-3 h-3 text-red-500" />,
+          text: 'Invalid',
+          textColor: 'text-red-600',
+          bgColor: 'bg-red-50'
+        };
+      case 'pending':
+      default:
+        return {
+          icon: <Clock className="w-3 h-3 text-yellow-500" />,
+          text: 'Pending',
+          textColor: 'text-yellow-600',
+          bgColor: 'bg-yellow-50'
+        };
+    }
+  };
+
   useEffect(() => {
     fetchSkills();
   }, []);
@@ -175,7 +203,7 @@ const Dashboard = () => {
                   <div className="flex justify-end gap-2 mb-2">
                     <button 
                       onClick={() => openEditModal(skill)}
-                      className="flex items-center justify-center p-2 rounded-full text-gray-50 bg-blue-600 hover:bg-blue-700 transition-colors"
+                      className="flex items-center justify-center p-2 rounded-full text-gray-50 bg-[rgb(11,17,41)] hover:bg-blue-900 transition-colors"
                       aria-label="Edit skill"
                     >
                       <Pencil className="w-4 h-4" />
@@ -195,24 +223,18 @@ const Dashboard = () => {
                   {skill.subSkillsSchema && skill.subSkillsSchema.length > 0 && (
                     <div className="mt-3 space-y-2">
                       <h4 className="text-sm font-medium text-gray-600">Sub-Skills:</h4>
-                      {skill.subSkillsSchema.map((subSkill, index) => (
-                        <div key={index} className="pl-2 border-l-2 border-gray-200">
-                          <div className="text-sm text-gray-700">{subSkill.title}</div>
-                          <div className="flex items-center gap-2 text-xs mt-1">
-                            {subSkill.isValid ? (
-                              <>
-                                <BadgeCheck className="w-3 h-3 text-green-500" />
-                                <span className="text-green-600">Verified</span>
-                              </>
-                            ) : (
-                              <>
-                                <XCircle className="w-3 h-3 text-red-500" />
-                                <span className="text-red-600">Not Verified</span>
-                              </>
-                            )}
+                      {skill.subSkillsSchema.map((subSkill, index) => {
+                        const statusInfo = getStatusDisplay(subSkill.status);
+                        return (
+                          <div key={index} className="pl-2 border-l-2 border-gray-200">
+                            <div className="text-sm text-gray-700">{subSkill.title}</div>
+                            <div className={`flex items-center gap-2 text-xs mt-1 px-2 py-1 rounded-full ${statusInfo.bgColor} w-fit`}>
+                              {statusInfo.icon}
+                              <span className={statusInfo.textColor}>{statusInfo.text}</span>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
