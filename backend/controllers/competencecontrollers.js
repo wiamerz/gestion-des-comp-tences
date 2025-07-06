@@ -68,7 +68,16 @@ const updateSkill = async(req, res) => {
     
     if (code) skill.code = code;
     if (title) skill.title = title;
-    if (subSkillsSchema) skill.subSkillsSchema = subSkillsSchema;
+    if (subSkillsSchema && Array.isArray(subSkillsSchema)) {
+        const isArrayOfObjects = subSkillsSchema.every(item => typeof item === 'object' && item.title);
+        
+        skill.subSkillsSchema = isArrayOfObjects
+          ? subSkillsSchema
+          : subSkillsSchema.map(title => ({
+              title: title,
+              status: 'pending'
+            }));
+      }
 
     await skill.save();
 
@@ -78,7 +87,8 @@ const updateSkill = async(req, res) => {
     });
     
   } catch (error) {
-    res.status(500).json({message: 'error update skill'}) 
+    console.error("UPDATE ERROR:", error);
+    res.status(500).json({message: 'error update skill', error: error.message }) 
   }
 }
 

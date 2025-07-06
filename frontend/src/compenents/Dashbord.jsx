@@ -36,10 +36,12 @@ const Dashboard = () => {
 // add skills
   const addskill = async (skillData) => {
     try {
-      const transformedData = {
-        ...skillData,
-        subSkillsSchema: skillData.subSkillsSchema.map(title => ({ title, status: 'pending' }))
-      };
+      subSkillsSchema: skillData.subSkillsSchema.map(title =>
+        typeof title === "string"
+          ? { title, status: 'pending' }
+          : title
+      )
+
       
       const response = await axios.post('http://localhost:5000/api/skill/add', transformedData);
       console.log("Skill data created successfully", response.data);
@@ -54,11 +56,11 @@ const Dashboard = () => {
 //update skill
   const updateSkill = async (skillId, skillData) => {
     try {
-      const transformedData = {
+       const transformedData = {
         ...skillData,
-        subSkillsSchema: skillData.subSkillsSchema.map(title => ({ title, status: 'pending' }))
-      };
-      
+        subSkillsSchema: skillData.subSkillsSchema
+       };
+
       const response = await axios.put(`http://localhost:5000/api/skill/edit/${skillId}`, transformedData);
       console.log("Skill updated successfully", response.data);
       return response.data;
@@ -77,8 +79,12 @@ const Dashboard = () => {
 
 //add subskill
   const addSubSkill = () => {
-    setFormData({ ...formData, subSkillsSchema: [...formData.subSkillsSchema, ""] });
-  };
+  setFormData({
+    ...formData,
+    subSkillsSchema: [...formData.subSkillsSchema, { title: "", status: "pending" }]
+  });
+};
+
 
 //delete sub skill
   const removeSubSkill = (index) => {
@@ -123,7 +129,10 @@ const Dashboard = () => {
     setFormData({
       code: skill.code,
       title: skill.title,
-      subSkillsSchema: skill.subSkillsSchema.map(sub => sub.title)
+      subSkillsSchema: skill.subSkillsSchema.map(sub => ({
+        title: sub.title,
+        status: sub.status || 'pending',
+      }))
     });
     setOpenModal(true);
   };
@@ -139,7 +148,6 @@ const Dashboard = () => {
     }
   };
 
-  // Helper function to get status display info
   const getStatusDisplay = (status) => {
     switch (status) {
       case 'valid':
@@ -166,6 +174,21 @@ const Dashboard = () => {
         };
     }
   };
+
+
+  const calculateCardStatus = (skill) => {
+  if (!skill.subSkillsSchema || skill.subSkillsSchema.length === 0) {
+    return 'neutral'; 
+  }
+
+  const validCount = skill.subSkillsSchema.filter(sub => sub.status === 'valid').length;
+  const invalidCount = skill.subSkillsSchema.filter(sub => sub.status === 'invalid').length;
+
+  if (validCount > invalidCount) return 'valid';
+  if (invalidCount > validCount) return 'invalid';
+  return 'neutral';
+};
+
 
   useEffect(() => {
     fetchSkills();
@@ -198,7 +221,13 @@ const Dashboard = () => {
               {skills.map((skill) => (
                 <div
                   key={skill._id}
-                  className="bg-white rounded-xl shadow hover:shadow-lg transition-all p-5 space-y-2 border border-gray-100"
+                  className={`rounded-xl shadow hover:shadow-lg transition-all p-5 space-y-2 border ${
+                    calculateCardStatus(skill) === 'valid' 
+                      ? 'bg-green-50 border-green-200' 
+                      : calculateCardStatus(skill) === 'invalid' 
+                        ? 'bg-red-50 border-red-200' 
+                        : 'bg-white border-gray-100'
+                  }`}
                 >
                   <div className="flex justify-end gap-2 mb-2">
                     <button 
@@ -285,22 +314,40 @@ const Dashboard = () => {
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">Sub-Skills</label>
                   {formData.subSkillsSchema.map((sub, index) => (
-                    <div key={index} className="flex gap-2 items-center">
-                      <input
-                        placeholder={`Sub-skill ${index + 1}`}
-                        value={sub}
-                        onChange={(e) => handleSubSkillsChange(e, index)}
-                        className="flex-1 border px-3 py-2 rounded"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeSubSkill(index)}
-                        className="text-red-600 hover:text-red-800 p-1"
-                      >
-                        <XCircle className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
+                  <div key={index} className="flex flex-col sm:flex-row gap-2 items-center">
+                    <input
+                      placeholder={`Sub-skill ${index + 1}`}
+                      value={sub.title}
+                      onChange={(e) => {
+                        const updated = [...formData.subSkillsSchema];
+                        updated[index].title = e.target.value;
+                        setFormData({ ...formData, subSkillsSchema: updated });
+                      }}
+                      className="flex-1 border px-3 py-2 rounded"
+                    />
+                    <select
+                      value={sub.status}
+                      onChange={(e) => {
+                        const updated = [...formData.subSkillsSchema];
+                        updated[index].status = e.target.value;
+                        setFormData({ ...formData, subSkillsSchema: updated });
+                      }}
+                      className="border px-2 py-2 rounded text-sm"
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="valid">Valid</option>
+                      <option value="invalid">Invalid</option>
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => removeSubSkill(index)}
+                      className="text-red-600 hover:text-red-800 p-1"
+                    >
+                      <XCircle className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+
                   <button
                     type="button"
                     onClick={addSubSkill}
