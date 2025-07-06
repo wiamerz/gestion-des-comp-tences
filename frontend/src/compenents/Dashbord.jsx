@@ -2,11 +2,14 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import Navbar from './navbar';
 import Footer from './Footer';
-import { BadgeCheck, XCircle, Plus , Trash, Pencil} from 'lucide-react';
+import { BadgeCheck, XCircle, Plus, Trash, Pencil } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const Dashboard = () => {
   const [skills, setSkills] = useState([]);
-  const [openModal, setOpenModal] = useState(false); 
+  const [openModal, setOpenModal] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editingSkillId, setEditingSkillId] = useState(null);
   const [formData, setFormData] = useState({
     code: "",
     title: "",
@@ -14,10 +17,23 @@ const Dashboard = () => {
   });
   const [error, setError] = useState("");
 
-  const handleChange = (e) => {
-    setFormData({...formData, [e.target.name]: e.target.value});
-  }
 
+//get skills
+  const fetchSkills = async () => {
+    try {
+      const res = await axios.get('http://localhost:5000/api/skill/get');
+      setSkills(res.data);
+    } catch (error) {
+      console.log("Error in getting skills", error);
+      setError("Failed to load skills");
+    }
+  };
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+// add skills
   const addskill = async (skillData) => {
     try {
       const transformedData = {
@@ -33,18 +49,43 @@ const Dashboard = () => {
       setError(error.response?.data?.message || "Failed to create skill");
       throw error;
     }
-  }
+  };
+
+//update skill
+  const updateSkill = async (skillId, skillData) => {
+    try {
+      const transformedData = {
+        ...skillData,
+        subSkillsSchema: skillData.subSkillsSchema.map(title => ({ title, isValid: false }))
+      };
+      
+      const response = await axios.put(`http://localhost:5000/api/skill/edit/${skillId}`, transformedData);
+      console.log("Skill updated successfully", response.data);
+      return response.data;
+    } catch (error) {
+      console.log("Error updating skill:", error.response?.data || error.message);
+      setError(error.response?.data?.message || "Failed to update skill");
+      throw error;
+    }
+  };
 
   const handleSubSkillsChange = (e, index) => {
     const updated = [...formData.subSkillsSchema];
     updated[index] = e.target.value;
     setFormData({ ...formData, subSkillsSchema: updated });
   };
- 
+
+//add subskill
   const addSubSkill = () => {
     setFormData({ ...formData, subSkillsSchema: [...formData.subSkillsSchema, ""] });
   };
-    
+
+//delete sub skill
+  const removeSubSkill = (index) => {
+    const updated = formData.subSkillsSchema.filter((_, i) => i !== index);
+    setFormData({ ...formData, subSkillsSchema: updated });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -53,39 +94,54 @@ const Dashboard = () => {
         return;
       }
       
-      await addskill(formData);
-      const res = await axios.get('http://localhost:5000/api/skill/get'); 
-      setSkills(res.data);
-      setOpenModal(false); 
-      setFormData({ code: "", title: "", subSkillsSchema: [] });
-      setError("");
+      if (editMode) {
+        await updateSkill(editingSkillId, formData);
+        toast.success("Skill updated successfully");
+      } else {
+        await addskill(formData);
+        toast.success("Skill created successfully");
+      }
+      
+      await fetchSkills();
+      closeModal();
     } catch (error) {
       console.error("Submission error:", error);
     }
   };
 
+  const closeModal = () => {
+    setOpenModal(false);
+    setEditMode(false);
+    setEditingSkillId(null);
+    setFormData({ code: "", title: "", subSkillsSchema: [] });
+    setError("");
+  };
+
+  const openEditModal = (skill) => {
+    setEditMode(true);
+    setEditingSkillId(skill._id);
+    setFormData({
+      code: skill.code,
+      title: skill.title,
+      subSkillsSchema: skill.subSkillsSchema.map(sub => sub.title)
+    });
+    setOpenModal(true);
+  };
+
+  const deleteskill = async (id) => {
+    try {
+      await axios.delete(`http://localhost:5000/api/skill/delete/${id}`);
+      toast.success("The skill deleted successfully");
+      await fetchSkills();
+    } catch (error) {
+      toast.error("There is an error in deleting this skill");
+      console.log("There is an error in deleting this skill", error);
+    }
+  };
+
   useEffect(() => {
-    const fetchSkills = async () => {
-      try {
-        const res = await axios.get('http://localhost:5000/api/skill/get');
-        setSkills(res.data);
-      } catch (error) {
-        console.log("Error in getting skills", error);
-        setError("Failed to load skills");
-      }
-    };
     fetchSkills();
   }, []);
-
-
-  const editsubskill = async() => {
-    try {
-      const data = await axios.put(`http://localhost:5000/api/skill/edit`);
-      
-    } catch (error) {
-      
-    }
-  }
 
   return (
     <>
@@ -116,21 +172,25 @@ const Dashboard = () => {
                   key={skill._id}
                   className="bg-white rounded-xl shadow hover:shadow-lg transition-all p-5 space-y-2 border border-gray-100"
                 >
-                { /* <div>
+                  <div className="flex justify-end gap-2 mb-2">
                     <button 
-                    className="flex items-center justify-center p-2 rounded-full text-gray-50 bg-gray-800 hover:bg-gray-600 transition-colors"
-                  >
-                    <Pencil className="w-5 h-5" />
-                  </button>
-                  </div> */}
+                      onClick={() => openEditModal(skill)}
+                      className="flex items-center justify-center p-2 rounded-full text-gray-50 bg-blue-600 hover:bg-blue-700 transition-colors"
+                      aria-label="Edit skill"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={() => deleteskill(skill._id)}
+                      className="flex items-center justify-center p-2 rounded-full text-gray-50 bg-red-600 hover:bg-red-700 transition-colors"
+                      aria-label="Delete skill"
+                    >
+                      <Trash className="w-4 h-4" />
+                    </button>
+                  </div>
+                  
                   <div className="text-lg font-semibold text-gray-800">{skill.code}</div>
                   <div className="text-sm text-gray-700">{skill.title}</div>
-                  
-                   <button 
-                    className="flex items-center justify-center p-2 rounded-full text-gray-50 bg-gray-800 hover:bg-gray-600 transition-colors"
-                  >
-                    <Trash className="w-5 h-5" />
-                  </button>
 
                   {skill.subSkillsSchema && skill.subSkillsSchema.length > 0 && (
                     <div className="mt-3 space-y-2">
@@ -163,19 +223,18 @@ const Dashboard = () => {
 
         {openModal && ( 
           <div className="fixed inset-0 bg-black/30 bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md relative">
+            <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md relative max-h-[90vh] overflow-y-auto">
               <button
                 className="absolute top-2 right-2 text-gray-500 hover:text-gray-800"
-                onClick={() => {
-                  setOpenModal(false); 
-                  setError("");
-                }}
+                onClick={closeModal}
               >
                 <XCircle />
               </button>
 
               <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-                <h3 className="text-xl font-semibold text-gray-700">Add New Skill</h3>
+                <h3 className="text-xl font-semibold text-gray-700">
+                  {editMode ? 'Edit Skill' : 'Add New Skill'}
+                </h3>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Code*</label>
@@ -204,13 +263,21 @@ const Dashboard = () => {
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">Sub-Skills</label>
                   {formData.subSkillsSchema.map((sub, index) => (
-                    <input
-                      key={index}
-                      placeholder={`Sub-skill ${index + 1}`}
-                      value={sub}
-                      onChange={(e) => handleSubSkillsChange(e, index)}
-                      className="w-full border px-3 py-2 rounded"
-                    />
+                    <div key={index} className="flex gap-2 items-center">
+                      <input
+                        placeholder={`Sub-skill ${index + 1}`}
+                        value={sub}
+                        onChange={(e) => handleSubSkillsChange(e, index)}
+                        className="flex-1 border px-3 py-2 rounded"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeSubSkill(index)}
+                        className="text-red-600 hover:text-red-800 p-1"
+                      >
+                        <XCircle className="w-4 h-4" />
+                      </button>
+                    </div>
                   ))}
                   <button
                     type="button"
@@ -227,7 +294,7 @@ const Dashboard = () => {
                   type="submit"
                   className="bg-[rgb(11,17,41)] hover:bg-[rgb(20, 36, 99)] text-white px-4 py-2 rounded w-full mt-4"
                 >
-                  Create Skill
+                  {editMode ? 'Update Skill' : 'Create Skill'}
                 </button>
               </form>
             </div>
