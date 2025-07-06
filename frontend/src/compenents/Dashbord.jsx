@@ -2,13 +2,67 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import Navbar from './navbar';
 import Footer from './Footer';
-import { BadgeCheck, XCircle, Plus } from 'lucide-react';
+import { BadgeCheck, XCircle, Plus , Trash, Pencil} from 'lucide-react';
 
 const Dashboard = () => {
   const [skills, setSkills] = useState([]);
-  const [formDatat, setFormData] = useState({
-     
-  })
+  const [openModal, setOpenModal] = useState(false); 
+  const [formData, setFormData] = useState({
+    code: "",
+    title: "",
+    subSkillsSchema: [],
+  });
+  const [error, setError] = useState("");
+
+  const handleChange = (e) => {
+    setFormData({...formData, [e.target.name]: e.target.value});
+  }
+
+  const addskill = async (skillData) => {
+    try {
+      const transformedData = {
+        ...skillData,
+        subSkillsSchema: skillData.subSkillsSchema.map(title => ({ title, isValid: false }))
+      };
+      
+      const response = await axios.post('http://localhost:5000/api/skill/add', transformedData);
+      console.log("Skill data created successfully", response.data);
+      return response.data;
+    } catch (error) {
+      console.log("Error creating skill:", error.response?.data || error.message);
+      setError(error.response?.data?.message || "Failed to create skill");
+      throw error;
+    }
+  }
+
+  const handleSubSkillsChange = (e, index) => {
+    const updated = [...formData.subSkillsSchema];
+    updated[index] = e.target.value;
+    setFormData({ ...formData, subSkillsSchema: updated });
+  };
+ 
+  const addSubSkill = () => {
+    setFormData({ ...formData, subSkillsSchema: [...formData.subSkillsSchema, ""] });
+  };
+    
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      if (!formData.code || !formData.title) {
+        setError("Code and Title are required");
+        return;
+      }
+      
+      await addskill(formData);
+      const res = await axios.get('http://localhost:5000/api/skill/get'); 
+      setSkills(res.data);
+      setOpenModal(false); 
+      setFormData({ code: "", title: "", subSkillsSchema: [] });
+      setError("");
+    } catch (error) {
+      console.error("Submission error:", error);
+    }
+  };
 
   useEffect(() => {
     const fetchSkills = async () => {
@@ -17,18 +71,19 @@ const Dashboard = () => {
         setSkills(res.data);
       } catch (error) {
         console.log("Error in getting skills", error);
+        setError("Failed to load skills");
       }
     };
     fetchSkills();
   }, []);
 
-  const addskill = async() => {
+
+  const editsubskill = async() => {
     try {
-       const data = await axios.post('http://localhost:5000/api/skill/add');
-     
-        
+      const data = await axios.put(`http://localhost:5000/api/skill/edit`);
+      
     } catch (error) {
-        
+      
     }
   }
 
@@ -37,13 +92,18 @@ const Dashboard = () => {
       <Navbar />
       <div className="min-h-screen bg-gray-50 py-10 px-4 sm:px-8">
         <div className="max-w-7xl mx-auto">
-            <div className='flex justify-between items-center'>
-              <h2 className="text-2xl font-bold text-gray-800 mb-8">Your Skills</h2> 
-              <Plus 
-              
-              className="text-2xl font-bold rounded-2xl text-gray-50 mb-8 bg-gray-800 hover:bg-gray-600" />
-              </div>
+          <div className='flex justify-between items-center'>
+            <h2 className="text-2xl font-bold text-gray-800 mb-8">Your Skills</h2> 
+            <button 
+              onClick={() => setOpenModal(true)} 
+              className="flex items-center justify-center p-2 rounded-full text-gray-50 bg-gray-800 hover:bg-gray-600 transition-colors"
+              aria-label="Add new skill"
+            >
+              <Plus className="w-5 h-5" />
+            </button>
+          </div>
           
+          {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
 
           {skills.length === 0 ? (
             <div className="bg-white rounded-xl shadow p-6 text-center text-gray-500">
@@ -56,34 +116,123 @@ const Dashboard = () => {
                   key={skill._id}
                   className="bg-white rounded-xl shadow hover:shadow-lg transition-all p-5 space-y-2 border border-gray-100"
                 >
-                  <div className="text-lg font-semibold text-black-600">{skill.code}</div>
+                { /* <div>
+                    <button 
+                    className="flex items-center justify-center p-2 rounded-full text-gray-50 bg-gray-800 hover:bg-gray-600 transition-colors"
+                  >
+                    <Pencil className="w-5 h-5" />
+                  </button>
+                  </div> */}
+                  <div className="text-lg font-semibold text-gray-800">{skill.code}</div>
                   <div className="text-sm text-gray-700">{skill.title}</div>
+                  
+                   <button 
+                    className="flex items-center justify-center p-2 rounded-full text-gray-50 bg-gray-800 hover:bg-gray-600 transition-colors"
+                  >
+                    <Trash className="w-5 h-5" />
+                  </button>
 
-                  {skill.subSkillsSchema && (
-                    <>
-                      <div className="text-sm text-gray-600 font-medium">
-                        Sub Skill: {skill.subSkillsSchema.title}
-                      </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        {skill.subSkillsSchema.isValid ? (
-                          <>
-                            <BadgeCheck className="w-4 h-4 text-green-500" />
-                            <span className="text-green-600">Valid</span>
-                          </>
-                        ) : (
-                          <>
-                            <XCircle className="w-4 h-4 text-red-500" />
-                            <span className="text-red-600">Invalid</span>
-                          </>
-                        )}
-                      </div>
-                    </>
+                  {skill.subSkillsSchema && skill.subSkillsSchema.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      <h4 className="text-sm font-medium text-gray-600">Sub-Skills:</h4>
+                      {skill.subSkillsSchema.map((subSkill, index) => (
+                        <div key={index} className="pl-2 border-l-2 border-gray-200">
+                          <div className="text-sm text-gray-700">{subSkill.title}</div>
+                          <div className="flex items-center gap-2 text-xs mt-1">
+                            {subSkill.isValid ? (
+                              <>
+                                <BadgeCheck className="w-3 h-3 text-green-500" />
+                                <span className="text-green-600">Verified</span>
+                              </>
+                            ) : (
+                              <>
+                                <XCircle className="w-3 h-3 text-red-500" />
+                                <span className="text-red-600">Not Verified</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
               ))}
             </div>
           )}
         </div>
+
+        {openModal && ( 
+          <div className="fixed inset-0 bg-black/30 bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md relative">
+              <button
+                className="absolute top-2 right-2 text-gray-500 hover:text-gray-800"
+                onClick={() => {
+                  setOpenModal(false); 
+                  setError("");
+                }}
+              >
+                <XCircle />
+              </button>
+
+              <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+                <h3 className="text-xl font-semibold text-gray-700">Add New Skill</h3>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Code*</label>
+                  <input
+                    name="code"
+                    placeholder="C1, C2 ..."
+                    onChange={handleChange}
+                    value={formData.code}
+                    className="w-full border px-3 py-2 rounded"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Title*</label>
+                  <input
+                    name="title"
+                    placeholder="Skill title"
+                    onChange={handleChange}
+                    value={formData.title}
+                    className="w-full border px-3 py-2 rounded"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">Sub-Skills</label>
+                  {formData.subSkillsSchema.map((sub, index) => (
+                    <input
+                      key={index}
+                      placeholder={`Sub-skill ${index + 1}`}
+                      value={sub}
+                      onChange={(e) => handleSubSkillsChange(e, index)}
+                      className="w-full border px-3 py-2 rounded"
+                    />
+                  ))}
+                  <button
+                    type="button"
+                    onClick={addSubSkill}
+                    className="text-blue-600 font-semibold text-sm flex items-center"
+                  >
+                    <Plus className="w-4 h-4 mr-1" /> Add Sub-Skill
+                  </button>
+                </div>
+
+                {error && <div className="text-red-500 text-sm">{error}</div>}
+
+                <button
+                  type="submit"
+                  className="bg-[rgb(11,17,41)] hover:bg-[rgb(20, 36, 99)] text-white px-4 py-2 rounded w-full mt-4"
+                >
+                  Create Skill
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
       <Footer />
     </>

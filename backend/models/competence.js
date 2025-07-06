@@ -1,17 +1,16 @@
 const mongoose = require('mongoose');
 
-const subSkillsSchema = new mongoose.Schema({
-    title: {
-      type: String,
-      required: true,
-    },
-     
-    isValid:{
-        type: Boolean,
-        default: false
-      },
-}, {_id: false})
-
+const subSkillSchema = new mongoose.Schema({
+  title: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  isValid: {
+    type: Boolean,
+    default: false
+  }
+}); 
 
 const skillSchema = new mongoose.Schema({
     code:{
@@ -24,7 +23,10 @@ const skillSchema = new mongoose.Schema({
        required: true
 
     },
-    subSkillsSchema: subSkillsSchema
+   subSkillsSchema: {
+    type: [subSkillSchema],
+    default: []
+  }
 });
 
   module.exports = mongoose.model('Skill', skillSchema); 
